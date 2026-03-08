@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { getCurrentUser, getSubjects, addSubject, deleteSubject, getStudents, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
