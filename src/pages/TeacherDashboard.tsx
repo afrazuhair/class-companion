@@ -65,6 +65,8 @@ const TeacherDashboard = () => {
     if (!selectedSubject) return;
     const records = students.map((s) => ({ studentId: s.id, present: attendanceMap[s.id] ?? true }));
     saveAttendance(selectedSubject, attendanceDate, records);
+    refreshData();
+    toast.success("Attendance saved successfully!");
   };
 
   const totalAttendance = subjects.reduce((acc, sub) => acc + getAttendance(sub.id).length, 0);
