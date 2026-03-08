@@ -113,6 +113,19 @@ export function getStudents(): User[] {
   return get<User>(KEYS.users).filter((u) => u.role === "student");
 }
 
+export function addStudent(name: string, email: string): User {
+  const users = get<User>(KEYS.users);
+  const newStudent: User = { id: `s_${Date.now()}`, name, email, role: "student" };
+  users.push(newStudent);
+  set(KEYS.users, users);
+  return newStudent;
+}
+
+export function deleteStudent(id: string) {
+  set(KEYS.users, get<User>(KEYS.users).filter((u) => u.id !== id));
+  set(KEYS.attendance, get<AttendanceRecord>(KEYS.attendance).filter((a) => a.studentId !== id));
+}
+
 // Attendance
 export function getAttendance(subjectId?: string, studentId?: string): AttendanceRecord[] {
   let records = get<AttendanceRecord>(KEYS.attendance);
