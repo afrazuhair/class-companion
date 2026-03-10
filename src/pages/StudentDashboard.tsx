@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarCheck, CalendarX, Percent } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { CalendarCheck, CalendarX, Percent, AlertTriangle } from "lucide-react";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -32,11 +33,38 @@ const StudentDashboard = () => {
   const overallPresent = myAttendance.filter((r) => r.present).length;
   const overallPercentage = overallTotal > 0 ? Math.round((overallPresent / overallTotal) * 100) : 0;
 
+  const lowSubjects = subjects.filter((sub) => {
+    const stats = getStats(sub.id);
+    return stats.total > 0 && stats.percentage < 75;
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="container py-8 space-y-8">
-        {/* Overview Cards */}
+        {/* Low Attendance Warning */}
+        {overallTotal > 0 && overallPercentage < 75 && (
+          <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertTitle className="text-lg font-semibold">Low Attendance Warning</AlertTitle>
+            <AlertDescription className="mt-2">
+              <p>Your overall attendance is <strong>{overallPercentage}%</strong>, which is below the required <strong>75%</strong> minimum.</p>
+              {lowSubjects.length > 0 && (
+                <ul className="mt-2 list-disc list-inside space-y-1">
+                  {lowSubjects.map((sub) => {
+                    const stats = getStats(sub.id);
+                    return (
+                      <li key={sub.id}>
+                        <strong>{sub.name}</strong>: {stats.percentage}%
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <p className="mt-2 text-sm">Please ensure regular attendance to avoid academic consequences.</p>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="flex items-center gap-4 pt-6">
