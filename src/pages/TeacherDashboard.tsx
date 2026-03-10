@@ -103,6 +103,31 @@ const TeacherDashboard = () => {
 
   const totalAttendance = subjects.reduce((acc, sub) => acc + getAttendance(sub.id).length, 0);
 
+  const handleExportExcel = () => {
+    const rows: Record<string, string | number>[] = [];
+    const filteredStudents = students;
+    const filteredSubjects = reportSubject === "all" ? subjects : subjects.filter(s => s.id === reportSubject);
+
+    filteredStudents.forEach((student) => {
+      const row: Record<string, string | number> = { Name: student.name, Email: student.email };
+      filteredSubjects.forEach((sub) => {
+        const stats = getStudentStats(student.id, sub.id);
+        row[`${sub.name} (Present)`] = stats.present;
+        row[`${sub.name} (Total)`] = stats.total;
+        row[`${sub.name} (%)`] = stats.percentage;
+      });
+      const overall = getStudentStats(student.id, reportSubject === "all" ? undefined : reportSubject);
+      row["Overall %"] = overall.percentage;
+      rows.push(row);
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+    XLSX.writeFile(wb, `attendance_report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast.success("Report exported!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
