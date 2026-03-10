@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3 } from "lucide-react";
+import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3, Download } from "lucide-react";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
