@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getCurrentUser, getSubjects, addSubject, deleteSubject, getStudents, addStudent, deleteStudent, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3, Download } from "lucide-react";
+import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3, Download, Mail } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
@@ -126,6 +127,42 @@ const TeacherDashboard = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
     XLSX.writeFile(wb, `attendance_report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
     toast.success("Report exported!");
+  };
+
+  const [sendingAlerts, setSendingAlerts] = useState(false);
+
+  const handleSendAlerts = async () => {
+    const lowAttendanceStudents = students
+      .map((student) => {
+        const overall = getStudentStats(student.id);
+        const subjectStats = subjects
+          .map((sub) => {
+            const stats = getStudentStats(student.id, sub.id);
+            return { name: sub.name, percentage: stats.percentage };
+          })
+          .filter((s) => s.percentage > 0);
+        return { name: student.name, email: student.email, percentage: overall.percentage, subjects: subjectStats };
+      })
+      .filter((s) => s.percentage > 0 && s.percentage < 75);
+
+    if (lowAttendanceStudents.length === 0) {
+      toast.info("All students have 75%+ attendance. No alerts needed!");
+      return;
+    }
+
+    setSendingAlerts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-attendance-alert", {
+        body: { students: lowAttendanceStudents },
+      });
+      if (error) throw error;
+      toast.success(`Alerts sent to ${data.count} student(s) with low attendance!`);
+    } catch (err: any) {
+      console.error("Error sending alerts:", err);
+      toast.error("Failed to send alerts. Please try again.");
+    } finally {
+      setSendingAlerts(false);
+    }
   };
 
   return (
@@ -355,6 +392,9 @@ const TeacherDashboard = () => {
                        </select>
                      </div>
                      <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Export</Button>
+                     <Button variant="destructive" size="sm" onClick={handleSendAlerts} disabled={sendingAlerts}>
+                       <Mail className="h-4 w-4 mr-1" /> {sendingAlerts ? "Sending..." : "Alert <75%"}
+                     </Button>
                    </div>
                 </div>
               </CardHeader>
