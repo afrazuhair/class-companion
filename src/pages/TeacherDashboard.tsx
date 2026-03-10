@@ -392,6 +392,9 @@ const TeacherDashboard = () => {
                        </select>
                      </div>
                      <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Export</Button>
+                     <Button variant="destructive" size="sm" onClick={handleSendAlerts} disabled={sendingAlerts}>
+                       <Mail className="h-4 w-4 mr-1" /> {sendingAlerts ? "Sending..." : "Alert <75%"}
+                     </Button>
                    </div>
                 </div>
               </CardHeader>
