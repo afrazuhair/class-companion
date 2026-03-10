@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getCurrentUser, getSubjects, addSubject, deleteSubject, getStudents, addStudent, deleteStudent, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
