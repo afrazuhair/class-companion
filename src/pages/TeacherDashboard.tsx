@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3 } from "lucide-react";
+import { Plus, Trash2, BookOpen, Users, CalendarCheck, UserPlus, BarChart3, Download } from "lucide-react";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -101,6 +102,31 @@ const TeacherDashboard = () => {
   };
 
   const totalAttendance = subjects.reduce((acc, sub) => acc + getAttendance(sub.id).length, 0);
+
+  const handleExportExcel = () => {
+    const rows: Record<string, string | number>[] = [];
+    const filteredStudents = students;
+    const filteredSubjects = reportSubject === "all" ? subjects : subjects.filter(s => s.id === reportSubject);
+
+    filteredStudents.forEach((student) => {
+      const row: Record<string, string | number> = { Name: student.name, Email: student.email };
+      filteredSubjects.forEach((sub) => {
+        const stats = getStudentStats(student.id, sub.id);
+        row[`${sub.name} (Present)`] = stats.present;
+        row[`${sub.name} (Total)`] = stats.total;
+        row[`${sub.name} (%)`] = stats.percentage;
+      });
+      const overall = getStudentStats(student.id, reportSubject === "all" ? undefined : reportSubject);
+      row["Overall %"] = overall.percentage;
+      rows.push(row);
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+    XLSX.writeFile(wb, `attendance_report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast.success("Report exported!");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -320,13 +346,16 @@ const TeacherDashboard = () => {
                     <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Student Reports</CardTitle>
                     <CardDescription>View attendance breakdown for every student</CardDescription>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Filter by Subject</Label>
-                    <select className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground" value={reportSubject} onChange={(e) => setReportSubject(e.target.value)}>
-                      <option value="all">All Subjects</option>
-                      {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
+                   <div className="flex items-end gap-2">
+                     <div className="space-y-1">
+                       <Label className="text-xs">Filter by Subject</Label>
+                       <select className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground" value={reportSubject} onChange={(e) => setReportSubject(e.target.value)}>
+                         <option value="all">All Subjects</option>
+                         {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                       </select>
+                     </div>
+                     <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Export</Button>
+                   </div>
                 </div>
               </CardHeader>
               <CardContent>
