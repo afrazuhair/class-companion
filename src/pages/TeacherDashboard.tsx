@@ -346,13 +346,16 @@ const TeacherDashboard = () => {
                     <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Student Reports</CardTitle>
                     <CardDescription>View attendance breakdown for every student</CardDescription>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Filter by Subject</Label>
-                    <select className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground" value={reportSubject} onChange={(e) => setReportSubject(e.target.value)}>
-                      <option value="all">All Subjects</option>
-                      {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
+                   <div className="flex items-end gap-2">
+                     <div className="space-y-1">
+                       <Label className="text-xs">Filter by Subject</Label>
+                       <select className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground" value={reportSubject} onChange={(e) => setReportSubject(e.target.value)}>
+                         <option value="all">All Subjects</option>
+                         {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                       </select>
+                     </div>
+                     <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Export</Button>
+                   </div>
                 </div>
               </CardHeader>
               <CardContent>
