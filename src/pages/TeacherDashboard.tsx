@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getCurrentUser, getSubjects, addSubject, deleteSubject, getStudents, addStudent, deleteStudent, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
+import { getSubjects, addSubject, deleteSubject, getStudents, addStudent, deleteStudent, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import * as XLSX from "xlsx";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { profile, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -33,20 +34,20 @@ const TeacherDashboard = () => {
   const [reportSubject, setReportSubject] = useState<string>("all");
 
   useEffect(() => {
-    if (!user || user.role !== "teacher") { navigate("/"); return; }
+    if (authLoading) return;
+    if (!profile || profile.role !== "teacher") { navigate("/"); return; }
     refreshData();
-  }, []);
+  }, [profile, authLoading]);
 
   const refreshData = () => {
-    const user = getCurrentUser();
-    if (!user) return;
-    setSubjects(getSubjects(user.id));
+    if (!profile) return;
+    setSubjects(getSubjects(profile.user_id));
     setStudents(getStudents());
   };
 
   const handleAddSubject = () => {
-    if (!newSubjectName.trim() || !user) return;
-    addSubject(newSubjectName.trim(), user.id);
+    if (!newSubjectName.trim() || !profile) return;
+    addSubject(newSubjectName.trim(), profile.user_id);
     setNewSubjectName("");
     setDialogOpen(false);
     refreshData();
