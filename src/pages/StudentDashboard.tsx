@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser, getSubjects, getAttendance, getStudents, type Subject, type AttendanceRecord } from "@/lib/store";
+import { getSubjects, getAttendance, getStudents, type Subject, type AttendanceRecord } from "@/lib/store";
+import { useAuth } from "@/hooks/useAuth";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
