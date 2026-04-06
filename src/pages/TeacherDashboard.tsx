@@ -46,8 +46,8 @@ const TeacherDashboard = () => {
   };
 
   const handleAddSubject = () => {
-    if (!newSubjectName.trim() || !user) return;
-    addSubject(newSubjectName.trim(), user.id);
+    if (!newSubjectName.trim() || !profile) return;
+    addSubject(newSubjectName.trim(), profile.user_id);
     setNewSubjectName("");
     setDialogOpen(false);
     refreshData();
