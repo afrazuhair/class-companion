@@ -34,14 +34,14 @@ const TeacherDashboard = () => {
   const [reportSubject, setReportSubject] = useState<string>("all");
 
   useEffect(() => {
-    if (!user || user.role !== "teacher") { navigate("/"); return; }
+    if (authLoading) return;
+    if (!profile || profile.role !== "teacher") { navigate("/"); return; }
     refreshData();
-  }, []);
+  }, [profile, authLoading]);
 
   const refreshData = () => {
-    const user = getCurrentUser();
-    if (!user) return;
-    setSubjects(getSubjects(user.id));
+    if (!profile) return;
+    setSubjects(getSubjects(profile.user_id));
     setStudents(getStudents());
   };
 

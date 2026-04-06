@@ -12,15 +12,16 @@ import { CalendarCheck, CalendarX, Percent, AlertTriangle } from "lucide-react";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { profile, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [myAttendance, setMyAttendance] = useState<AttendanceRecord[]>([]);
 
   useEffect(() => {
-    if (!user || user.role !== "student") { navigate("/"); return; }
+    if (authLoading) return;
+    if (!profile || profile.role !== "student") { navigate("/"); return; }
     setSubjects(getSubjects());
-    setMyAttendance(getAttendance(undefined, user.id));
-  }, []);
+    setMyAttendance(getAttendance(undefined, profile.user_id));
+  }, [profile, authLoading]);
 
   const getStats = (subjectId: string) => {
     const records = myAttendance.filter((r) => r.subjectId === subjectId);
