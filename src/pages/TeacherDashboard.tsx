@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getSubjects, addSubject, deleteSubject, getStudents, addStudent, deleteStudent, getAttendance, saveAttendance, type Subject, type User } from "@/lib/store";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { subjectStore, attendanceStore, alertStore, userStore, type Subject, type AttendanceRecord, type User } from "@/lib/firestore";
+import { db } from "@/integrations/firebase/config";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { useAuth } from "@/hooks/useFirebaseAuth";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,13 +21,14 @@ import * as XLSX from "xlsx";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [attendanceDate, setAttendanceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [attendanceMap, setAttendanceMap] = useState<Record<string, boolean>>({});
   const [students, setStudents] = useState<User[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [studentDialogOpen, setStudentDialogOpen] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
@@ -35,75 +37,135 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!profile || profile.role !== "teacher") { navigate("/"); return; }
-    refreshData();
-  }, [profile, authLoading]);
+    if (!user || user.role !== "teacher") { navigate("/"); return; }
 
-  const refreshData = () => {
-    if (!profile) return;
-    setSubjects(getSubjects(profile.user_id));
-    setStudents(getStudents());
+    const loadData = async () => {
+      await refreshData();
+    };
+
+    loadData();
+  }, [user, authLoading]);
+
+  const refreshData = async () => {
+    if (!user) return;
+    try {
+      const subjectList = await subjectStore.getByTeacher(user.id);
+      
+      // Get all students from users collection with role="student"
+      const studentsRef = collection(db, "users");
+      const studentsQuery = query(studentsRef, where("role", "==", "student"));
+      const studentSnapshot = await getDocs(studentsQuery);
+      const studentList = studentSnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        email: doc.data().email,
+        role: "student" as const
+      }));
+      
+      // Get all attendance records
+      const allAttendance: AttendanceRecord[] = [];
+      for (const subject of subjectList) {
+        const attendance = await attendanceStore.getBySubject(subject.id);
+        allAttendance.push(...attendance);
+      }
+      
+      setSubjects(subjectList);
+      setStudents(studentList);
+      setAttendanceRecords(allAttendance);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast.error("Failed to load data");
+    }
   };
 
-  const handleAddSubject = () => {
-    if (!newSubjectName.trim() || !profile) return;
-    addSubject(newSubjectName.trim(), profile.user_id);
-    setNewSubjectName("");
-    setDialogOpen(false);
-    refreshData();
-    toast.success("Subject added!");
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim() || !user) return;
+    try {
+      await subjectStore.create(newSubjectName.trim(), user.id);
+      setNewSubjectName("");
+      setDialogOpen(false);
+      await refreshData();
+      toast.success("Subject added!");
+    } catch (error) {
+      console.error("Error adding subject:", error);
+      toast.error("Failed to add subject");
+    }
   };
 
-  const handleDeleteSubject = (id: string) => {
-    deleteSubject(id);
-    if (selectedSubject === id) setSelectedSubject(null);
-    refreshData();
-    toast.success("Subject deleted.");
+  const handleDeleteSubject = async (id: string) => {
+    try {
+      await subjectStore.delete(id);
+      if (selectedSubject === id) setSelectedSubject(null);
+      await refreshData();
+      toast.success("Subject deleted.");
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+      toast.error("Failed to delete subject");
+    }
   };
 
-  const handleAddStudent = () => {
+  const handleAddStudent = async () => {
     if (!newStudentName.trim() || !newStudentEmail.trim()) return;
-    addStudent(newStudentName.trim(), newStudentEmail.trim());
-    setNewStudentName("");
-    setNewStudentEmail("");
-    setStudentDialogOpen(false);
-    refreshData();
-    toast.success("Student added!");
+    try {
+      // Note: Students should sign up through the app, not added manually by teachers
+      // For now, we'll show a message
+      toast.info("Students must sign up with their own accounts");
+      setNewStudentName("");
+      setNewStudentEmail("");
+      setStudentDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding student:", error);
+      toast.error("Failed to add student");
+    }
   };
 
-  const handleDeleteStudent = (id: string) => {
-    deleteStudent(id);
-    refreshData();
-    toast.success("Student removed.");
+  const handleDeleteStudent = async (id: string) => {
+    try {
+      await userStore.delete(id);
+      await refreshData();
+      toast.success("Student removed.");
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast.error("Failed to delete student");
+    }
   };
 
-  const loadAttendance = (subjectId: string, date: string) => {
+  const loadAttendance = async (subjectId: string, date: string) => {
     setSelectedSubject(subjectId);
     setAttendanceDate(date);
-    const records = getAttendance(subjectId);
+    const records = await getAttendance(subjectId);
     const map: Record<string, boolean> = {};
     students.forEach((s) => { map[s.id] = true; });
     records.filter((r) => r.date === date).forEach((r) => { map[r.studentId] = r.present; });
     setAttendanceMap(map);
   };
 
-  const handleSaveAttendance = () => {
+  const handleSaveAttendance = async () => {
     if (!selectedSubject) return;
-    const records = students.map((s) => ({ studentId: s.id, present: attendanceMap[s.id] ?? true }));
-    saveAttendance(selectedSubject, attendanceDate, records);
-    refreshData();
-    toast.success("Attendance saved successfully!");
+    try {
+      const records = students.map((s) => ({ studentId: s.id, present: attendanceMap[s.id] ?? true }));
+      await attendanceStore.record(selectedSubject, attendanceDate, records);
+      await refreshData();
+      toast.success("Attendance saved successfully!");
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+      toast.error("Failed to save attendance");
+    }
   };
 
   const getStudentStats = (studentId: string, subjectId?: string) => {
-    const records = getAttendance(subjectId, studentId);
+    const records = attendanceRecords.filter((r) => {
+      if (subjectId && r.subjectId !== subjectId) return false;
+      return r.studentId === studentId;
+    });
+
     const total = records.length;
     const present = records.filter((r) => r.present).length;
     const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
     return { total, present, absent: total - present, percentage };
   };
 
-  const totalAttendance = subjects.reduce((acc, sub) => acc + getAttendance(sub.id).length, 0);
+  const totalAttendance = attendanceRecords.length;
 
   const handleExportExcel = () => {
     const rows: Record<string, string | number>[] = [];
@@ -153,12 +215,9 @@ const TeacherDashboard = () => {
 
     setSendingAlerts(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-attendance-alert", {
-        body: { students: lowAttendanceStudents },
-      });
-      if (error) throw error;
-      toast.success(`Alerts sent to ${data.count} student(s) with low attendance!`);
-    } catch (err: any) {
+      await alertStore.send(lowAttendanceStudents.map(s => ({ id: s.email, name: s.name, email: s.email })));
+      toast.success(`Alerts recorded for ${lowAttendanceStudents.length} student(s) with low attendance!`);
+    } catch (err) {
       console.error("Error sending alerts:", err);
       toast.error("Failed to send alerts. Please try again.");
     } finally {
@@ -231,7 +290,7 @@ const TeacherDashboard = () => {
             </div>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {subjects.map((sub) => {
-                const records = getAttendance(sub.id);
+                const records = attendanceRecords.filter((r) => r.subjectId === sub.id);
                 const uniqueDates = new Set(records.map((r) => r.date)).size;
                 return (
                   <Card key={sub.id}>

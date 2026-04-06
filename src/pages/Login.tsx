@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useFirebaseAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,20 +19,23 @@ const Login = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, signUp, profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signup, login, logout } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && profile) {
-      navigate(profile.role === "teacher" ? "/teacher" : "/student");
+    if (!authLoading && user) {
+      navigate(user.role === "teacher" ? "/teacher" : "/student");
     }
-  }, [profile, authLoading, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) setError(error);
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in");
+    }
     setLoading(false);
   };
 
@@ -41,11 +44,11 @@ const Login = () => {
     setError("");
     setMessage("");
     setLoading(true);
-    const { error } = await signUp(email, password, name, role);
-    if (error) {
-      setError(error);
-    } else {
-      setMessage("Check your email for a confirmation link!");
+    try {
+      await signup(name, email, password, role);
+      setMessage("Account created! You're now signed in.");
+    } catch (err: any) {
+      setError(err.message || "Failed to create account");
     }
     setLoading(false);
   };

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSubjects, getAttendance, getStudents, type Subject, type AttendanceRecord } from "@/lib/store";
-import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/integrations/firebase/config";
+import { collection, getDocs } from "firebase/firestore";
+import { attendanceStore, type AttendanceRecord } from "@/lib/firestore";
+import { useAuth } from "@/hooks/useFirebaseAuth";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,16 +14,32 @@ import { CalendarCheck, CalendarX, Percent, AlertTriangle } from "lucide-react";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const { profile, loading: authLoading } = useAuth();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<AttendanceRecord[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!profile || profile.role !== "student") { navigate("/"); return; }
-    setSubjects(getSubjects());
-    setMyAttendance(getAttendance(undefined, profile.user_id));
-  }, [profile, authLoading]);
+    if (!user || user.role !== "student") { navigate("/"); return; }
+
+    const loadData = async () => {
+      try {
+        // Get all subjects
+        const subjectsRef = collection(db, "subjects");
+        const subjectsSnapshot = await getDocs(subjectsRef);
+        const subjectList = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSubjects(subjectList);
+        
+        // Get my attendance records
+        const attendance = await attendanceStore.getByStudent(user.id);
+        setMyAttendance(attendance);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
+    };
+
+    loadData();
+  }, [user, authLoading]);
 
   const getStats = (subjectId: string) => {
     const records = myAttendance.filter((r) => r.subjectId === subjectId);
