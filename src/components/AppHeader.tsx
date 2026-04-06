@@ -1,14 +1,14 @@
-import { getCurrentUser, logout } from "@/lib/store";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, LogOut } from "lucide-react";
 
 const AppHeader = () => {
-  const user = getCurrentUser();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -25,7 +25,7 @@ const AppHeader = () => {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            {user?.name} <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize">{user?.role}</span>
+            {profile?.name} <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize">{profile?.role}</span>
           </span>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-1" /> Logout
