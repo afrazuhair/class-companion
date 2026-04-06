@@ -20,7 +20,7 @@ import * as XLSX from "xlsx";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { profile, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
